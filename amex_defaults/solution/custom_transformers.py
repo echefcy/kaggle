@@ -41,6 +41,8 @@ class FloatImputer(BaseEstimator, TransformerMixin):
         transformed = X.groupby(X.index).apply(transform_group)
         return transformed.reset_index().set_index('customer_ID').drop('level_1', axis=1).set_axis(X.columns, axis=1)
 
+NPOLY = 9
+
 class LinRegTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, ids, dates):
         # Assuming the dates column is sorted from earlier to later for each customer_ID, and there are no missing values
@@ -48,25 +50,47 @@ class LinRegTransformer(BaseEstimator, TransformerMixin):
         self.dates = dates
     def fit(self, X, y=None):
         # X is the column modeled by linear regression
-        working = pd.DataFrame(self.dates).set_index(self.ids).set_axis(['time'], axis=1)
-        self.fitted_models = {}
+        print(f'fitting {X.name}')
+        working = pd.concat([self.dates, X], axis=1).set_index(self.ids).set_axis(['time', 'encoded_col'], axis=1)
+        self.fitted_models = []
         def fit_models(group):
             scaler = MinMaxScaler(feature_range=(0, 1))
             time = scaler.fit_transform((group['time'] - group['time'].iloc[0]).dt.days.values.reshape(-1, 1)).reshape(1, -1)[0]
             regX = pd.DataFrame()
-            for i in range(11):
+            for i in range(NPOLY):
                 regX[f'poly{i}'] = time ** i
-            model = LinearRegression(fit_intercept=False)
-            model.fit(regX, group)
-            self.fitted_models[group.index[0]] = model
+            model = LinearRegression(fit_intercept=False, n_jobs=-1)
+            model.fit(regX, group['encoded_col'])
+            self.fitted_models.append(model)
+            if len(self.fitted_models) % 100000 == 0:
+                print(f'{len(self.fitted_models)}')
         working.groupby(working.index).apply(fit_models)
+        print(f'fitted {X.name}')
         return self
     def transform(self, X, y=None):
+        print(f'transforming {X.name}')
         uniques = self.ids.unique()
+
+        from io import StringIO
+        from csv import writer
+        
+        output = StringIO()
+        csv_writer = writer(output)
+
+        sample_coefs = self.fitted_models[0].coef_
+        # write column header
+        csv_writer.writerow([f'{X.name}_coef{i}' for i in range(len(sample_coefs))])
+        for i in range(len(uniques)):
+            csv_writer.writerow(self.fitted_models[i].coef_)
+        
+        output.seek(0)
+        ret = pd.read_csv(output)
+        return ret.set_index(uniques)
         
         # This sets up the shape of the dataframe
-        sample_coefs = self.fitted_models[uniques[0]].coef_[0]
+        sample_coefs = self.fitted_models[0].coef_
         ret = pd.DataFrame(columns=[f'{X.name}_coef{i}' for i in range(len(sample_coefs))])
         for i in range(len(uniques)):
-            ret.loc[uniques[i]] = self.fitted_models[uniques[i]].coef_[0]
-        return ret
+            ret.loc[len(ret.index)] = self.fitted_models[i].coef_
+        print(f'transformed {X.name}')
+        return ret.set_index(uniques)

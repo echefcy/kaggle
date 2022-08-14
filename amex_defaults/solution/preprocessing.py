@@ -1,6 +1,10 @@
 import pandas as pd
 from custom_transformers import *
 
+# top 10 mi scores: ['D_77', 'P_2', 'D_48', 'D_61', 'B_17', 'D_62', 'D_44', 'B_9', 'D_75', 'B_18']
+
+SELECTED_FEATURES = ['D_77', 'P_2', 'D_48', 'D_61', 'B_17', 'D_62', 'D_44', 'B_9', 'D_75', 'B_18']
+
 def preprocess_floats(data: pd.DataFrame):
     # preprocess(data) is the preprocessed float columns
     # data is the complete feature set with customer_ID as its index
@@ -19,7 +23,7 @@ def preprocess_cats(data: pd.DataFrame):
 
 def preprocess(data: pd.DataFrame):
     data = data.set_index('customer_ID')
-    selected_features = ['D_77', 'P_2', 'D_48', 'D_61', 'B_17', 'D_62', 'D_44', 'B_9', 'D_75', 'B_18']
+    selected_features = SELECTED_FEATURES
     selected_data = data[selected_features]
 
     cats = preprocess_cats(selected_data)
@@ -50,7 +54,7 @@ def encode(data: pd.DataFrame):
 
 def preprocess_encode(data: pd.DataFrame):
     data = data.set_index('customer_ID')
-    selected_features = ['D_77', 'P_2', 'D_48', 'D_61', 'B_17', 'D_62', 'D_44', 'B_9', 'D_75', 'B_18']
+    selected_features = SELECTED_FEATURES
     selected_data = data[selected_features]
 
     cats = preprocess_cats(selected_data)
