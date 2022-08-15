@@ -86,11 +86,3 @@ class LinRegTransformer(BaseEstimator, TransformerMixin):
         output.seek(0)
         ret = pd.read_csv(output)
         return ret.set_index(uniques)
-        
-        # This sets up the shape of the dataframe
-        sample_coefs = self.fitted_models[0].coef_
-        ret = pd.DataFrame(columns=[f'{X.name}_coef{i}' for i in range(len(sample_coefs))])
-        for i in range(len(uniques)):
-            ret.loc[len(ret.index)] = self.fitted_models[i].coef_
-        print(f'transformed {X.name}')
-        return ret.set_index(uniques)
