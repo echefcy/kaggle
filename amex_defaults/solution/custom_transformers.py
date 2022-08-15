@@ -24,20 +24,23 @@ class FloatImputer(BaseEstimator, TransformerMixin):
                 group[cname].fillna(col_defaults[cname], inplace=True)
 
     def fit(self, X: pd.DataFrame, y = None):
-        self.fitted_imputers = {}
+        self.fitted_imputers = []
         col_defaults = {cname : 0.0 for cname in X.columns}
         def fit_group(group: pd.DataFrame):
             self.fill_group(group, col_defaults)
             imp = SimpleImputer()
-            self.fitted_imputers[group.index[0]] = imp.fit(group)
+            self.fitted_imputers.append(imp.fit(group))
         X.groupby(X.index).apply(fit_group)
         return self
         
     def transform(self, X: pd.DataFrame, y = None):
         col_defaults = {cname : X[cname].mean() for cname in X.columns}
+        self.group_number = 0
         def transform_group(group: pd.DataFrame):
             self.fill_group(group, col_defaults)
-            return pd.DataFrame(self.fitted_imputers[group.index[0]].transform(group))
+            ret = pd.DataFrame(self.fitted_imputers[self.group_number].transform(group))
+            self.group_number += 1
+            return ret
         transformed = X.groupby(X.index).apply(transform_group)
         return transformed.reset_index().set_index('customer_ID').drop('level_1', axis=1).set_axis(X.columns, axis=1)
 
