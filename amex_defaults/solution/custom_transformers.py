@@ -24,24 +24,32 @@ class FloatImputer(BaseEstimator, TransformerMixin):
                 group[cname].fillna(col_defaults[cname], inplace=True)
 
     def fit(self, X: pd.DataFrame, y = None):
+        print(f'fitting')
         self.fitted_imputers = []
         col_defaults = {cname : 0.0 for cname in X.columns}
         def fit_group(group: pd.DataFrame):
             self.fill_group(group, col_defaults)
             imp = SimpleImputer()
             self.fitted_imputers.append(imp.fit(group))
+            if len(self.fitted_imputers) % 10000 == 0:
+                print(f'{len(self.fitted_imputers)}')
         X.groupby(X.index).apply(fit_group)
+        print(f'fitted')
         return self
         
     def transform(self, X: pd.DataFrame, y = None):
+        print(f'transforming')
         col_defaults = {cname : X[cname].mean() for cname in X.columns}
         self.group_number = 0
         def transform_group(group: pd.DataFrame):
             self.fill_group(group, col_defaults)
             ret = pd.DataFrame(self.fitted_imputers[self.group_number].transform(group))
+            if len(self.fitted_imputers) % 10000 == 0:
+                print(f'{self.group_number}')
             self.group_number += 1
             return ret
         transformed = X.groupby(X.index).apply(transform_group)
+        print(f'transformed\n')
         return transformed.reset_index().set_index('customer_ID').drop('level_1', axis=1).set_axis(X.columns, axis=1)
 
 NPOLY = 9
@@ -88,4 +96,5 @@ class LinRegTransformer(BaseEstimator, TransformerMixin):
         
         output.seek(0)
         ret = pd.read_csv(output)
+        print(f'transformed {X.name}\n')
         return ret.set_index(uniques)
