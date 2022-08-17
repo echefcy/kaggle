@@ -31,7 +31,7 @@ class FloatImputer(BaseEstimator, TransformerMixin):
             self.fill_group(group, col_defaults)
             imp = SimpleImputer()
             self.fitted_imputers.append(imp.fit(group))
-            if len(self.fitted_imputers) % 10000 == 0:
+            if len(self.fitted_imputers) % 100000 == 0:
                 print(f'{len(self.fitted_imputers)}')
         X.groupby(X.index).apply(fit_group)
         print(f'fitted')
@@ -44,7 +44,7 @@ class FloatImputer(BaseEstimator, TransformerMixin):
         def transform_group(group: pd.DataFrame):
             self.fill_group(group, col_defaults)
             ret = pd.DataFrame(self.fitted_imputers[self.group_number].transform(group))
-            if self.group_number % 10000 == 0:
+            if self.group_number % 100000 == 0:
                 print(f'{self.group_number}')
             self.group_number += 1
             return ret
